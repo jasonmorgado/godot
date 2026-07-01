@@ -5804,8 +5804,8 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 }
 
 void AnimationTrackEditor::_change_track_property_selected(const String &p_name) {
-	String current_track_path = animation->track_get_path(affected_track_idx);
-	String base_path = current_track_path.get_slice(":", 0);
+	NodePath current_track_path = animation->track_get_path(affected_track_idx);
+	String base_path = current_track_path.get_concatenated_names();
 	String new_path = base_path + ":" + p_name;
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
@@ -6054,7 +6054,7 @@ void AnimationTrackEditor::_move_track_to_node(NodePath p_path) {
 	// Get New Path, in respect to AP's root_node.
 	NodePath current_track_path = NodePath(animation->track_get_path(affected_track_idx));
 	String property_path = current_track_path.get_concatenated_subnames();
-	String new_path = root_node->get_path_to(new_node);
+	String new_path = String(root_node->get_path_to(new_node));
 	new_path = new_path + ":" + property_path;
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
