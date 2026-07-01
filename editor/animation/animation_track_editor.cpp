@@ -5977,52 +5977,6 @@ void AnimationTrackEditor::_new_track_node_selected(NodePath p_path) {
 	}
 }
 
-void AnimationTrackEditor::_add_track(int p_type) {
-	AnimationPlayer *ap = AnimationPlayerEditor::get_singleton()->get_player();
-	if (!ap) {
-		ERR_FAIL_EDMSG("No AnimationPlayer is currently being edited.");
-	}
-	Node *root_node = ap->get_node_or_null(ap->get_root_node());
-	if (!root_node) {
-		EditorNode::get_singleton()->show_warning(TTR("Not possible to add a new track without a root"));
-		return;
-	}
-	adding_track_type = p_type;
-
-	String title_text = TTRC("Pick a node to animate:");
-	Vector<StringName> valid_types;
-	switch (adding_track_type) {
-		case Animation::TYPE_BLEND_SHAPE: {
-			// Blend Shape is a property of MeshInstance3D.
-			valid_types.push_back(SNAME("MeshInstance3D"));
-		} break;
-		case Animation::TYPE_POSITION_3D:
-		case Animation::TYPE_ROTATION_3D:
-		case Animation::TYPE_SCALE_3D: {
-			// 3D Properties come from nodes inheriting Node3D.
-			valid_types.push_back(SNAME("Node3D"));
-		} break;
-		case Animation::TYPE_METHOD: {
-			title_text = TTRC("Pick a node to select method:");
-		} break;
-		case Animation::TYPE_AUDIO: {
-			valid_types.push_back(SNAME("AudioStreamPlayer"));
-			valid_types.push_back(SNAME("AudioStreamPlayer2D"));
-			valid_types.push_back(SNAME("AudioStreamPlayer3D"));
-			title_text = TTRC("Pick a node to play audio:");
-		} break;
-		case Animation::TYPE_ANIMATION: {
-			valid_types.push_back(SNAME("AnimationPlayer"));
-			title_text = TTRC("Pick a node to play animation:");
-		} break;
-	}
-	pick_track->set_valid_types(valid_types);
-	pick_track->set_title(title_text);
-	pick_track->popup_scenetree_dialog(nullptr, root_node);
-	pick_track->get_filter_line_edit()->clear();
-	pick_track->get_filter_line_edit()->grab_focus();
-}
-
 
 void AnimationTrackEditor::_fetch_value_track_options(const NodePath &p_path, Animation::UpdateMode *r_update_mode, Animation::InterpolationType *r_interpolation_type, bool *r_loop_wrap) {
 	AnimationPlayer *player = AnimationPlayerEditor::get_singleton()->get_player();
