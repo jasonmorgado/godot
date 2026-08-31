@@ -706,7 +706,6 @@ class AnimationTrackEditor : public VBoxContainer {
 
 	PropertySelector *prop_selector = nullptr;
 	PropertySelector *method_selector = nullptr;
-	PropertySelector *change_prop_selector = nullptr; // Change Property
 	SceneTreeDialog *pick_track = nullptr;
 	int dialog_state;
 	int adding_track_type = 0;
