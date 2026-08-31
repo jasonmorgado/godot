@@ -447,6 +447,8 @@ class AnimationTrackEdit : public Control {
 		MENU_USE_BLEND_DISABLED,
 		MENU_CHANGE_TARGET_NODE,
 		MENU_CHANGE_TARGET_PROPERTY,
+		MENU_CHANGE_TARGET_BLENDSHAPE,
+		MENU_CHANGE_TARGET_BONE,
 	};
 
 	AnimationTimelineEdit *timeline = nullptr;

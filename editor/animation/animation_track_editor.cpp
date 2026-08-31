@@ -52,6 +52,7 @@
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/3d/mesh_instance_3d.h"
+#include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/animation/tween.h"
 #include "scene/gui/check_box.h"
@@ -3264,21 +3265,42 @@ void AnimationTrackEdit::gui_input(const Ref<InputEvent> &p_event) {
 			}
 			menu->clear();
 			menu->add_item(TTR("Change Target Node..."), MENU_CHANGE_TARGET_NODE);
-			Node *target_node = editor->get_track_node_or_null(get_track());
+
+
+			// show change property dialog only if:
+			// NodePath is valid
+			// TrackType is Property/Bezier/Blendshape/Transform(bone only)
 			Animation::TrackType type = animation->track_get_type(get_track());
-			bool type_has_property;
-			switch (type) {
-				case Animation::TYPE_VALUE:
-				case Animation::TYPE_BLEND_SHAPE:
-				case Animation::TYPE_BEZIER: {
-					type_has_property = true;
-				} break;
-				default: {
-					type_has_property = false;
-				} break;
-			}
-			if (target_node && type_has_property) {
-				menu->add_item(TTR("Change Target Property..."), MENU_CHANGE_TARGET_PROPERTY);
+			Node *target = editor->get_track_node_or_null(get_track());
+			if (target){
+				switch (type) {
+					case Animation::TYPE_VALUE:
+					case Animation::TYPE_BEZIER: {
+						// These three always support properties.
+						menu->add_item(TTR("Change Target Property..."), MENU_CHANGE_TARGET_PROPERTY);
+					} break;
+					case Animation::TYPE_BLEND_SHAPE:{
+						// BlendShape has a slightly different selector.
+						menu->add_item(TTR("Change Target BlendShape..."), MENU_CHANGE_TARGET_BLENDSHAPE);
+					} break;
+					case Animation::TYPE_POSITION_3D:
+					case Animation::TYPE_ROTATION_3D:
+					case Animation::TYPE_SCALE_3D: {
+						// Transform tracks: only valid if pointing at a bone, not a node.
+						Skeleton3D *skeleton = Object::cast_to<Skeleton3D>(target);
+						if (!skeleton) {
+							break;
+						}
+						NodePath path = animation->track_get_path(get_track());
+						bool is_bone_track = path.get_subname_count() == 1 && skeleton->find_bone(path.get_subname(0)) != -1;
+						if (is_bone_track){
+							menu->add_item(TTR("Change Target Bone..."), MENU_CHANGE_TARGET_BONE);
+						}
+					} break;
+					default: {
+						break;
+					} break;
+				}
 			}
 
 			menu->reset_size();
@@ -3748,7 +3770,9 @@ void AnimationTrackEdit::_menu_selected(int p_index) {
 		case MENU_CHANGE_TARGET_NODE: {
 			emit_signal(SNAME("change_track_target_node"));
 		} break;
-		case MENU_CHANGE_TARGET_PROPERTY: {
+		case MENU_CHANGE_TARGET_PROPERTY:
+		case MENU_CHANGE_TARGET_BLENDSHAPE:
+		case MENU_CHANGE_TARGET_BONE: {
 			emit_signal(SNAME("change_track_target_property"));
 		} break;
 	}
@@ -5816,14 +5840,34 @@ void AnimationTrackEditor::_change_track_property_selected(const String &p_name)
 }
 
 void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
+	// Catches Change Target Property/BlendShape/Bone, need to split here.
 	Node *current_node = get_track_node_or_null(p_track);
 	if (!current_node) {
 		EditorNode::get_singleton()->show_warning(TTR("Not possible to change property without a valid target node"));
 		return;
 	}
+
+	switch (animation->track_get_type(p_track)) {
+		case Animation::TYPE_BLEND_SHAPE: {
+			// BlendShape selector is currently property selector with float filter.
+			Vector<Variant::Type> type_filter;
+			type_filter.push_back(Variant::FLOAT);
+			prop_selector->set_type_filter(type_filter);
+		} break;
+		case Animation::TYPE_POSITION_3D:
+		case Animation::TYPE_ROTATION_3D:
+		case Animation::TYPE_SCALE_3D: {
+			// Change Target Bone, use BonePicker here.
+			EditorNode::get_singleton()->show_warning(TTR("Changing bone targets is not implemented yet."));
+			return;
+		} break;
+		default: {
+			prop_selector->set_type_filter(Vector<Variant::Type>());
+		} break;
+	}
+
 	affected_track_idx = p_track;
 	dialog_state = DIALOG_CHANGE_PROPERTY_PATH;
-
 	prop_selector->select_property_from_instance(current_node);
 }
 
