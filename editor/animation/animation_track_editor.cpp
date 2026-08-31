@@ -5839,6 +5839,27 @@ void AnimationTrackEditor::_change_track_property_selected(const String &p_name)
 	undo_redo->commit_action();
 }
 
+Variant::Type AnimationTrackEditor::_get_track_value_type(int p_track) {
+	// Returns the Variant type we expect a track to filter for.
+
+	// Use the target property's variant type, if valid path.
+	Node *current_node = get_track_node_or_null(p_track);
+	if (current_node) {
+		NodePath current_track_path = animation->track_get_path(p_track);
+		if (current_track_path.get_subname_count() > 0) {
+			Variant prop_value = current_node->get_indexed(current_track_path.get_subnames());
+			if (prop_value.get_type() != Variant::NIL) {
+				return prop_value.get_type();
+			}
+		}
+	}
+	// Fallback to the first key's type.
+	if (animation->track_get_key_count(p_track) > 0) {
+		return animation->track_get_key_value(p_track, 0).get_type();
+	}
+	return Variant::NIL;
+}
+
 void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
 	// Catches Change Target Property/BlendShape/Bone, need to split here.
 	Node *current_node = get_track_node_or_null(p_track);
@@ -5852,6 +5873,15 @@ void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
 			// BlendShape selector is currently property selector with float filter.
 			Vector<Variant::Type> type_filter;
 			type_filter.push_back(Variant::FLOAT);
+			prop_selector->set_type_filter(type_filter);
+		} break;
+		case Animation::TYPE_VALUE: {
+			// Filter the property dialog by the type of the track's values.
+			Vector<Variant::Type> type_filter;
+			Variant::Type value_type = _get_track_value_type(p_track);
+			if (value_type != Variant::NIL) {
+				type_filter.push_back(value_type);
+			}
 			prop_selector->set_type_filter(type_filter);
 		} break;
 		case Animation::TYPE_POSITION_3D:

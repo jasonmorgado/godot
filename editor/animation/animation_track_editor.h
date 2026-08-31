@@ -699,6 +699,8 @@ class AnimationTrackEditor : public VBoxContainer {
 	void _change_track_target_node_pressed(int p_track);
 	void _change_track_target_property_pressed(int p_track); // end
 
+	Variant::Type _get_track_value_type(int p_track);
+
 	void _update_step_spinbox();
 	void _store_snap_states();
 
