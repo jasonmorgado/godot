@@ -5827,10 +5827,26 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 	pick_track->get_filter_line_edit()->grab_focus();
 }
 
+String AnimationTrackEditor::_get_blend_shape_track_path(const String &p_property_path) const {
+	// Handle NodePath w/ Property -> BlendShape track path conversion.
+	// MeshInstance3D exposes blend shapes as "Node:blend_shapes/<name>".
+	// A BlendShape animation track needs to store "Node:<name>".
+
+	if (p_property_path.contains(":blend_shapes/")) {
+		return p_property_path.replace_first(":blend_shapes/", ":");
+	}
+	return p_property_path;
+}
+
 void AnimationTrackEditor::_change_track_property_selected(const String &p_name) {
 	NodePath current_track_path = animation->track_get_path(affected_track_idx);
 	String base_path = current_track_path.get_concatenated_names();
 	String new_path = base_path + ":" + p_name;
+
+	bool is_blend_shape = adding_track_type == Animation::TYPE_BLEND_SHAPE;
+	if (is_blend_shape) {
+		new_path = _get_blend_shape_track_path(new_path);
+	}
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(TTR("Change Track Path"));
@@ -6189,10 +6205,7 @@ void AnimationTrackEditor::_new_track_property_selected(const String &p_name) {
 	} else {
 		bool is_blend_shape = adding_track_type == Animation::TYPE_BLEND_SHAPE;
 		if (is_blend_shape) {
-			PackedStringArray split = p_name.split("/");
-			if (!split.is_empty()) {
-				full_path = String(adding_track_path) + ":" + split[split.size() - 1];
-			}
+			full_path = _get_blend_shape_track_path(full_path);
 		}
 		undo_redo->create_action(TTR("Add Track"));
 		undo_redo->add_do_method(animation.ptr(), "add_track", adding_track_type);

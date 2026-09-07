@@ -701,6 +701,8 @@ class AnimationTrackEditor : public VBoxContainer {
 
 	Variant::Type _get_track_value_type(int p_track);
 
+	String _get_blend_shape_track_path(const String &p_property_path) const;
+
 	void _update_step_spinbox();
 	void _store_snap_states();
 
