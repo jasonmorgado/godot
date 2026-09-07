@@ -688,7 +688,7 @@ class AnimationTrackEditor : public VBoxContainer {
 	void _update_length(double p_new_len);
 	void _dropped_track(int p_from_track, int p_to_track);
 
-	Vector<StringName> _get_valid_types_for_track(int p_type); // Start
+	Vector<StringName> _get_valid_types_for_track(int p_type);
 	void _add_track(int p_type);
 	void _pick_track_node_selected(NodePath p_path);
 	void _new_track_node_selected(NodePath p_path);
@@ -697,10 +697,8 @@ class AnimationTrackEditor : public VBoxContainer {
 	void _new_track_property_selected(const String &p_name);
 	void _change_track_property_selected(const String &p_name);
 	void _change_track_target_node_pressed(int p_track);
-	void _change_track_target_property_pressed(int p_track); // end
-
+	void _change_track_target_property_pressed(int p_track);
 	Variant::Type _get_track_value_type(int p_track);
-
 	String _get_blend_shape_track_path(const String &p_property_path) const;
 
 	void _update_step_spinbox();

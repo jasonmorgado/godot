@@ -4272,6 +4272,24 @@ Node *AnimationTrackEditor::get_track_node_or_null(int p_track) {
 	return current_node;
 }
 
+bool AnimationTrackEditor::is_bone_track(int p_track) {
+	// Transform tracks with subnames point to bones.
+	// Doesn't check for skeleton node validity, as invalid paths may need to be able to change skeleton.
+
+	Animation::TrackType type = animation->track_get_type(p_track);
+	switch (type) {
+		case Animation::TYPE_POSITION_3D:
+		case Animation::TYPE_ROTATION_3D:
+		case Animation::TYPE_SCALE_3D:
+			break;
+		default:
+			return false;
+	}
+
+	NodePath path = animation->track_get_path(p_track);
+	return path.get_subname_count() == 1;
+}
+
 void AnimationTrackEditor::update_keying() {
 	bool keying_enabled = false;
 
@@ -5805,142 +5823,6 @@ void AnimationTrackEditor::_dropped_track(int p_from_track, int p_to_track) {
 	undo_redo->commit_action();
 }
 
-void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
-	NodePath current_path = animation->track_get_path(p_track);
-	AnimationPlayer *ap = AnimationPlayerEditor::get_singleton()->get_player();
-	if (!ap) {
-		ERR_FAIL_EDMSG("No AnimationPlayer is currently being edited.");
-	}
-	Node *root_node = ap->get_node_or_null(ap->get_root_node());
-
-	dialog_state = DIALOG_CHANGE_NODE_PATH;
-	affected_track_idx = p_track;
-
-	int track_type = animation->track_get_type(p_track);
-	Vector<StringName> valid_types = _get_valid_types_for_track(track_type);
-
-	// Transform3D pointing to bone requires Skeleton3D instead of Node3D.
-	if (is_bone_track(p_track)){
-		valid_types.clear();
-		valid_types.push_back(SNAME("Skeleton3D"));
-	}
-	pick_track->set_valid_types(valid_types);
-
-	pick_track->popup_scenetree_dialog(nullptr, root_node);
-	pick_track->get_filter_line_edit()->clear();
-	pick_track->get_filter_line_edit()->grab_focus();
-}
-
-bool AnimationTrackEditor::is_bone_track(int p_track) {
-	// Transform tracks with subnames point to bones.
-	// Doesn't check for skeleton node validity, as invalid paths may need to be able to change skeleton.
-
-	Animation::TrackType type = animation->track_get_type(p_track);
-	switch (type) {
-		case Animation::TYPE_POSITION_3D:
-		case Animation::TYPE_ROTATION_3D:
-		case Animation::TYPE_SCALE_3D:
-			break;
-		default:
-			return false;
-	}
-
-	NodePath path = animation->track_get_path(p_track);
-	return path.get_subname_count() == 1;
-}
-
-String AnimationTrackEditor::_get_blend_shape_track_path(const String &p_property_path) const {
-	// Handle NodePath w/ Property -> BlendShape track path conversion.
-	// MeshInstance3D exposes blend shapes as "Node:blend_shapes/<name>".
-	// A BlendShape animation track needs to store "Node:<name>".
-
-	if (p_property_path.contains(":blend_shapes/")) {
-		return p_property_path.replace_first(":blend_shapes/", ":");
-	}
-	return p_property_path;
-}
-
-void AnimationTrackEditor::_change_track_property_selected(const String &p_name) {
-	NodePath current_track_path = animation->track_get_path(affected_track_idx);
-	String base_path = current_track_path.get_concatenated_names();
-	String new_path = base_path + ":" + p_name;
-
-	bool is_blend_shape = adding_track_type == Animation::TYPE_BLEND_SHAPE;
-	if (is_blend_shape) {
-		new_path = _get_blend_shape_track_path(new_path);
-	}
-
-	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-	undo_redo->create_action(TTR("Change Track Path"));
-	undo_redo->add_do_method(animation.ptr(), "track_set_path", affected_track_idx, new_path);
-	undo_redo->add_undo_method(animation.ptr(), "track_set_path", affected_track_idx, current_track_path);
-	undo_redo->commit_action();
-}
-
-Variant::Type AnimationTrackEditor::_get_track_value_type(int p_track) {
-	// Returns the Variant type we expect a track to filter for.
-
-	// Use the target property's variant type, if valid path.
-	Node *current_node = get_track_node_or_null(p_track);
-	if (current_node) {
-		NodePath current_track_path = animation->track_get_path(p_track);
-		if (current_track_path.get_subname_count() > 0) {
-			Variant prop_value = current_node->get_indexed(current_track_path.get_subnames());
-			if (prop_value.get_type() != Variant::NIL) {
-				return prop_value.get_type();
-			}
-		}
-	}
-	// Fallback to the first key's type.
-	if (animation->track_get_key_count(p_track) > 0) {
-		return animation->track_get_key_value(p_track, 0).get_type();
-	}
-	return Variant::NIL;
-}
-
-void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
-	// Catches Change Target Property/BlendShape/Bone, need to split here.
-	Node *current_node = get_track_node_or_null(p_track);
-	if (!current_node) {
-		EditorNode::get_singleton()->show_warning(TTR("Not possible to change property without a valid target node"));
-		return;
-	}
-
-	switch (animation->track_get_type(p_track)) {
-		case Animation::TYPE_BLEND_SHAPE: {
-			// BlendShape selector is currently property selector with float filter.
-			Vector<Variant::Type> type_filter;
-			type_filter.push_back(Variant::FLOAT);
-			prop_selector->set_type_filter(type_filter);
-		} break;
-		case Animation::TYPE_VALUE: {
-			// Filter the property dialog by the type of the track's values.
-			Vector<Variant::Type> type_filter;
-			Variant::Type value_type = _get_track_value_type(p_track);
-			if (value_type != Variant::NIL) {
-				type_filter.push_back(value_type);
-			}
-			prop_selector->set_type_filter(type_filter);
-		} break;
-		case Animation::TYPE_POSITION_3D:
-		case Animation::TYPE_ROTATION_3D:
-		case Animation::TYPE_SCALE_3D: {
-			// Change Target Bone, use BonePicker here.
-			EditorNode::get_singleton()->show_warning(TTR("Changing bone targets is not implemented yet."));
-			return;
-		} break;
-		default: {
-			prop_selector->set_type_filter(Vector<Variant::Type>());
-		} break;
-	}
-
-	affected_track_idx = p_track;
-	dialog_state = DIALOG_CHANGE_PROPERTY_PATH;
-
-	String current_property = animation->track_get_path(p_track).get_concatenated_subnames();
-	prop_selector->select_property_from_instance(current_node, current_property);
-}
-
 Vector<StringName> AnimationTrackEditor::_get_valid_types_for_track(int p_type) {
 	Vector<StringName> valid_types;
 	switch (p_type) {
@@ -6090,7 +5972,6 @@ void AnimationTrackEditor::_new_track_node_selected(NodePath p_path) {
 		} break;
 	}
 }
-
 
 void AnimationTrackEditor::_fetch_value_track_options(const NodePath &p_path, Animation::UpdateMode *r_update_mode, Animation::InterpolationType *r_interpolation_type, bool *r_loop_wrap) {
 	AnimationPlayer *player = AnimationPlayerEditor::get_singleton()->get_player();
@@ -6242,6 +6123,124 @@ void AnimationTrackEditor::_new_track_property_selected(const String &p_name) {
 		undo_redo->add_undo_method(animation.ptr(), "remove_track", animation->get_track_count());
 		undo_redo->commit_action();
 	}
+}
+
+void AnimationTrackEditor::_change_track_property_selected(const String &p_name) {
+	NodePath current_track_path = animation->track_get_path(affected_track_idx);
+	String base_path = current_track_path.get_concatenated_names();
+	String new_path = base_path + ":" + p_name;
+
+	bool is_blend_shape = adding_track_type == Animation::TYPE_BLEND_SHAPE;
+	if (is_blend_shape) {
+		new_path = _get_blend_shape_track_path(new_path);
+	}
+
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
+	undo_redo->create_action(TTR("Change Track Path"));
+	undo_redo->add_do_method(animation.ptr(), "track_set_path", affected_track_idx, new_path);
+	undo_redo->add_undo_method(animation.ptr(), "track_set_path", affected_track_idx, current_track_path);
+	undo_redo->commit_action();
+}
+
+void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
+	NodePath current_path = animation->track_get_path(p_track);
+	AnimationPlayer *ap = AnimationPlayerEditor::get_singleton()->get_player();
+	if (!ap) {
+		ERR_FAIL_EDMSG("No AnimationPlayer is currently being edited.");
+	}
+	Node *root_node = ap->get_node_or_null(ap->get_root_node());
+
+	dialog_state = DIALOG_CHANGE_NODE_PATH;
+	affected_track_idx = p_track;
+
+	int track_type = animation->track_get_type(p_track);
+	Vector<StringName> valid_types = _get_valid_types_for_track(track_type);
+
+	// Transform3D pointing to bone requires Skeleton3D instead of Node3D.
+	if (is_bone_track(p_track)){
+		valid_types.clear();
+		valid_types.push_back(SNAME("Skeleton3D"));
+	}
+	pick_track->set_valid_types(valid_types);
+
+	pick_track->popup_scenetree_dialog(nullptr, root_node);
+	pick_track->get_filter_line_edit()->clear();
+	pick_track->get_filter_line_edit()->grab_focus();
+}
+
+void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
+	// Catches Change Target Property/BlendShape/Bone, need to split here.
+	Node *current_node = get_track_node_or_null(p_track);
+	if (!current_node) {
+		EditorNode::get_singleton()->show_warning(TTR("Not possible to change property without a valid target node"));
+		return;
+	}
+
+	switch (animation->track_get_type(p_track)) {
+		case Animation::TYPE_BLEND_SHAPE: {
+			// BlendShape selector is currently property selector with float filter.
+			Vector<Variant::Type> type_filter;
+			type_filter.push_back(Variant::FLOAT);
+			prop_selector->set_type_filter(type_filter);
+		} break;
+		case Animation::TYPE_VALUE: {
+			// Filter the property dialog by the type of the track's values.
+			Vector<Variant::Type> type_filter;
+			Variant::Type value_type = _get_track_value_type(p_track);
+			if (value_type != Variant::NIL) {
+				type_filter.push_back(value_type);
+			}
+			prop_selector->set_type_filter(type_filter);
+		} break;
+		case Animation::TYPE_POSITION_3D:
+		case Animation::TYPE_ROTATION_3D:
+		case Animation::TYPE_SCALE_3D: {
+			// Change Target Bone, use BonePicker here.
+			EditorNode::get_singleton()->show_warning(TTR("Changing bone targets is not implemented yet."));
+			return;
+		} break;
+		default: {
+			prop_selector->set_type_filter(Vector<Variant::Type>());
+		} break;
+	}
+
+	affected_track_idx = p_track;
+	dialog_state = DIALOG_CHANGE_PROPERTY_PATH;
+
+	String current_property = animation->track_get_path(p_track).get_concatenated_subnames();
+	prop_selector->select_property_from_instance(current_node, current_property);
+}
+
+Variant::Type AnimationTrackEditor::_get_track_value_type(int p_track) {
+	// Returns the Variant type we expect a track to filter for.
+
+	// Use the target property's variant type, if valid path.
+	Node *current_node = get_track_node_or_null(p_track);
+	if (current_node) {
+		NodePath current_track_path = animation->track_get_path(p_track);
+		if (current_track_path.get_subname_count() > 0) {
+			Variant prop_value = current_node->get_indexed(current_track_path.get_subnames());
+			if (prop_value.get_type() != Variant::NIL) {
+				return prop_value.get_type();
+			}
+		}
+	}
+	// Fallback to the first key's type.
+	if (animation->track_get_key_count(p_track) > 0) {
+		return animation->track_get_key_value(p_track, 0).get_type();
+	}
+	return Variant::NIL;
+}
+
+String AnimationTrackEditor::_get_blend_shape_track_path(const String &p_property_path) const {
+	// Handle NodePath w/ Property -> BlendShape track path conversion.
+	// MeshInstance3D exposes blend shapes as "Node:blend_shapes/<name>".
+	// A BlendShape animation track needs to store "Node:<name>".
+
+	if (p_property_path.contains(":blend_shapes/")) {
+		return p_property_path.replace_first(":blend_shapes/", ":");
+	}
+	return p_property_path;
 }
 
 void AnimationTrackEditor::_timeline_value_changed(double) {
