@@ -986,6 +986,7 @@ public:
 	void set_root(Node *p_root);
 	Node *get_root() const;
 	Node *get_track_node_or_null(int p_track);
+	bool is_bone_track(int p_track);
 	void update_keying();
 	bool has_keying() const;
 

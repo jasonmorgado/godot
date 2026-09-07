@@ -3286,14 +3286,12 @@ void AnimationTrackEdit::gui_input(const Ref<InputEvent> &p_event) {
 					case Animation::TYPE_POSITION_3D:
 					case Animation::TYPE_ROTATION_3D:
 					case Animation::TYPE_SCALE_3D: {
-						// Transform tracks: only valid if pointing at a bone, not a node.
+						// Transform tracks: "Change Target Bone" if pointing to valid skeleton AND bone.
 						Skeleton3D *skeleton = Object::cast_to<Skeleton3D>(target);
 						if (!skeleton) {
 							break;
 						}
-						NodePath path = animation->track_get_path(get_track());
-						bool is_bone_track = path.get_subname_count() == 1 && skeleton->find_bone(path.get_subname(0)) != -1;
-						if (is_bone_track){
+						if (editor->is_bone_track(get_track())) {
 							menu->add_item(TTR("Change Target Bone..."), MENU_CHANGE_TARGET_BONE);
 						}
 					} break;
@@ -5820,11 +5818,35 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 
 	int track_type = animation->track_get_type(p_track);
 	Vector<StringName> valid_types = _get_valid_types_for_track(track_type);
+
+	// Transform3D pointing to bone requires Skeleton3D instead of Node3D.
+	if (is_bone_track(p_track)){
+		valid_types.clear();
+		valid_types.push_back(SNAME("Skeleton3D"));
+	}
 	pick_track->set_valid_types(valid_types);
 
 	pick_track->popup_scenetree_dialog(nullptr, root_node);
 	pick_track->get_filter_line_edit()->clear();
 	pick_track->get_filter_line_edit()->grab_focus();
+}
+
+bool AnimationTrackEditor::is_bone_track(int p_track) {
+	// Transform tracks with subnames point to bones.
+	// Doesn't check for skeleton node validity, as invalid paths may need to be able to change skeleton.
+
+	Animation::TrackType type = animation->track_get_type(p_track);
+	switch (type) {
+		case Animation::TYPE_POSITION_3D:
+		case Animation::TYPE_ROTATION_3D:
+		case Animation::TYPE_SCALE_3D:
+			break;
+		default:
+			return false;
+	}
+
+	NodePath path = animation->track_get_path(p_track);
+	return path.get_subname_count() == 1;
 }
 
 String AnimationTrackEditor::_get_blend_shape_track_path(const String &p_property_path) const {
