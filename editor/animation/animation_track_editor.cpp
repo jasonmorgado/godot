@@ -5936,7 +5936,9 @@ void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
 
 	affected_track_idx = p_track;
 	dialog_state = DIALOG_CHANGE_PROPERTY_PATH;
-	prop_selector->select_property_from_instance(current_node);
+
+	String current_property = animation->track_get_path(p_track).get_concatenated_subnames();
+	prop_selector->select_property_from_instance(current_node, current_property);
 }
 
 Vector<StringName> AnimationTrackEditor::_get_valid_types_for_track(int p_type) {
