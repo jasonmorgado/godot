@@ -6183,7 +6183,8 @@ void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
 			type_filter.push_back(Variant::FLOAT);
 			prop_selector->set_type_filter(type_filter);
 		} break;
-		case Animation::TYPE_VALUE: {
+		case Animation::TYPE_VALUE:
+		case Animation::TYPE_BEZIER: {
 			// Filter the property dialog by the type of the track's values.
 			Vector<Variant::Type> type_filter;
 			Variant::Type value_type = _get_track_value_type(p_track);
