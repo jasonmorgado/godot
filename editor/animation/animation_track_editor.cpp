@@ -6192,6 +6192,9 @@ void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
 				type_filter.push_back(value_type);
 			}
 			prop_selector->set_type_filter(type_filter);
+
+			// No filtering property track until nested filters are supported.
+			prop_selector->set_type_filter(Vector<Variant::Type>());
 		} break;
 		case Animation::TYPE_POSITION_3D:
 		case Animation::TYPE_ROTATION_3D:
