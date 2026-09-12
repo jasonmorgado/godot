@@ -4266,7 +4266,6 @@ Node *AnimationTrackEditor::get_track_node_or_null(int p_track) {
 	if (!ap) {
 		return nullptr;
 	}
-	NodePath current_path = animation->track_get_path(p_track);
 	Node *root_node = ap->get_node_or_null(ap->get_root_node());
 	Node *current_node = root_node->get_node_or_null(animation->track_get_path(p_track));
 	return current_node;
@@ -6143,7 +6142,6 @@ void AnimationTrackEditor::_change_track_property_selected(const String &p_name)
 }
 
 void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
-	NodePath current_path = animation->track_get_path(p_track);
 	AnimationPlayer *ap = AnimationPlayerEditor::get_singleton()->get_player();
 	if (!ap) {
 		ERR_FAIL_EDMSG("No AnimationPlayer is currently being edited.");
@@ -6156,6 +6154,8 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 	int track_type = animation->track_get_type(p_track);
 	Vector<StringName> valid_types = _get_valid_types_for_track(track_type);
 
+	Node *current_node = get_track_node_or_null(p_track);
+
 	// Transform3D pointing to bone requires Skeleton3D instead of Node3D.
 	if (is_bone_track(p_track)){
 		valid_types.clear();
@@ -6163,7 +6163,7 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 	}
 	pick_track->set_valid_types(valid_types);
 
-	pick_track->popup_scenetree_dialog(nullptr, root_node);
+	pick_track->popup_scenetree_dialog(current_node, root_node);
 	pick_track->get_filter_line_edit()->clear();
 	pick_track->get_filter_line_edit()->grab_focus();
 }
