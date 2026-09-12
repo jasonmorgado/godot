@@ -3266,20 +3266,19 @@ void AnimationTrackEdit::gui_input(const Ref<InputEvent> &p_event) {
 			menu->clear();
 			menu->add_item(TTR("Change Target Node..."), MENU_CHANGE_TARGET_NODE);
 
-
 			// show change property dialog only if:
 			// NodePath is valid
 			// TrackType is Property/Bezier/Blendshape/Transform(bone only)
 			Animation::TrackType type = animation->track_get_type(get_track());
 			Node *target = editor->get_track_node_or_null(get_track());
-			if (target){
+			if (target) {
 				switch (type) {
 					case Animation::TYPE_VALUE:
 					case Animation::TYPE_BEZIER: {
 						// These three always support properties.
 						menu->add_item(TTR("Change Target Property..."), MENU_CHANGE_TARGET_PROPERTY);
 					} break;
-					case Animation::TYPE_BLEND_SHAPE:{
+					case Animation::TYPE_BLEND_SHAPE: {
 						// BlendShape has a slightly different selector.
 						menu->add_item(TTR("Change Target BlendShape..."), MENU_CHANGE_TARGET_BLENDSHAPE);
 					} break;
@@ -6157,7 +6156,7 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 	Node *current_node = get_track_node_or_null(p_track);
 
 	// Transform3D pointing to bone requires Skeleton3D instead of Node3D.
-	if (is_bone_track(p_track)){
+	if (is_bone_track(p_track)) {
 		valid_types.clear();
 		valid_types.push_back(SNAME("Skeleton3D"));
 	}
