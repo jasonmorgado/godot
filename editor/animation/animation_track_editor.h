@@ -707,10 +707,10 @@ class AnimationTrackEditor : public VBoxContainer {
 	PropertySelector *prop_selector = nullptr;
 	PropertySelector *method_selector = nullptr;
 	SceneTreeDialog *pick_track = nullptr;
-	int dialog_state;
+	int dialog_state = -1;
 	int adding_track_type = 0;
 	NodePath adding_track_path;
-	int affected_track_idx;
+	int affected_track_idx = -1;
 
 	bool keying = false;
 
