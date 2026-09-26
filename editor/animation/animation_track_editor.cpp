@@ -4276,14 +4276,10 @@ bool AnimationTrackEditor::is_bone_track(int p_track) {
 	// Transform tracks with subnames point to bones.
 	// Doesn't check for skeleton node validity, as invalid paths may need to be able to change skeleton.
 
-	Animation::TrackType type = animation->track_get_type(p_track);
-	switch (type) {
-		case Animation::TYPE_POSITION_3D:
-		case Animation::TYPE_ROTATION_3D:
-		case Animation::TYPE_SCALE_3D:
-			break;
-		default:
-			return false;
+	const Animation::TrackType type = animation->track_get_type(p_track);
+	const bool is_transform_track = (type == Animation::TYPE_POSITION_3D || type == Animation::TYPE_ROTATION_3D || type == Animation::TYPE_SCALE_3D);
+	if (!is_transform_track) {
+		return false;
 	}
 
 	NodePath path = animation->track_get_path(p_track);
