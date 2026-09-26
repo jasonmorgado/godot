@@ -73,6 +73,8 @@
 constexpr double FPS_DECIMAL = 1.0;
 constexpr double SECOND_DECIMAL = 0.0001;
 
+static const String ANIMATIONPLAYER_CANNOT_ANIMATE_SELF_MESSAGE = TTRC("AnimationPlayer can't animate itself, only other players.");
+
 void AnimationTrackKeyEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_update_obj"), &AnimationTrackKeyEdit::_update_obj);
 	ClassDB::bind_method(D_METHOD("_key_ofs_changed"), &AnimationTrackKeyEdit::_key_ofs_changed);
@@ -4755,7 +4757,7 @@ void AnimationTrackEditor::insert_node_value_key(Node *p_node, const String &p_p
 
 	if (Object::cast_to<AnimationPlayer>(p_node) && p_property == "current_animation") {
 		if (p_node == AnimationPlayerEditor::get_singleton()->get_player()) {
-			EditorNode::get_singleton()->show_warning(TTR("AnimationPlayer can't animate itself, only other players."));
+			EditorNode::get_singleton()->show_warning(TTR(ANIMATIONPLAYER_CANNOT_ANIMATE_SELF_MESSAGE));
 			return;
 		}
 		_insert_animation_key(path, value);
@@ -5957,7 +5959,7 @@ void AnimationTrackEditor::_new_track_node_selected(NodePath p_path) {
 			}
 
 			if (node == AnimationPlayerEditor::get_singleton()->get_player()) {
-				EditorNode::get_singleton()->show_warning(TTR("AnimationPlayer can't animate itself, only other players."));
+				EditorNode::get_singleton()->show_warning(TTR(ANIMATIONPLAYER_CANNOT_ANIMATE_SELF_MESSAGE));
 				return;
 			}
 
@@ -6025,13 +6027,13 @@ void AnimationTrackEditor::_fetch_value_track_options(const NodePath &p_path, An
 
 /*
 	Takes p_path - a NodePath to a new target node (NOT with the property)
-	and p_track - The AnimationTrack
-	Changes the Animation's path to match that node.
+	Changes the path associated with affected_track_idx to match that node.
 */
 void AnimationTrackEditor::_move_track_to_node(NodePath p_path) {
 	Node *tree_root = EditorNode::get_singleton()->get_tree()->get_root();
 	Node *new_node = tree_root->get_node_or_null(p_path);
 	ERR_FAIL_NULL(new_node);
+	Animation::TrackType track_type = animation->track_get_type(affected_track_idx);
 
 	// Get AnimationPlayer's root_node.
 	AnimationPlayer *ap = AnimationPlayerEditor::get_singleton()->get_player();
@@ -6049,6 +6051,13 @@ void AnimationTrackEditor::_move_track_to_node(NodePath p_path) {
 	String property_path = current_track_path.get_concatenated_subnames();
 	String new_path = String(root_node->get_path_to(new_node));
 	new_path = new_path + ":" + property_path;
+
+	// Prevent animating this AnimationPlayer's current_animation.
+	bool animating_self = (new_node == ap && (track_type == Animation::TYPE_ANIMATION || property_path == "current_animation"));
+	if (animating_self) {
+		EditorNode::get_singleton()->show_warning(TTR(ANIMATIONPLAYER_CANNOT_ANIMATE_SELF_MESSAGE));
+		return;
+	}
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(TTR("Change Track Path"));
