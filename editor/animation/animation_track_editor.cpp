@@ -6190,18 +6190,17 @@ void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
 			type_filter.push_back(Variant::FLOAT);
 			prop_selector->set_type_filter(type_filter);
 		} break;
-		case Animation::TYPE_VALUE:
 		case Animation::TYPE_BEZIER: {
-			// Filter the property dialog by the type of the track's values.
-			Vector<Variant::Type> type_filter;
-			Variant::Type value_type = _get_track_value_type(p_track);
-			if (value_type != Variant::NIL) {
-				type_filter.push_back(value_type);
-			}
-			prop_selector->set_type_filter(type_filter);
+			Vector<Variant::Type> filter;
+			filter.push_back(Variant::INT);
+			filter.push_back(Variant::FLOAT);
+			filter.push_back(Variant::VECTOR2);
+			filter.push_back(Variant::VECTOR3);
+			filter.push_back(Variant::QUATERNION);
+			filter.push_back(Variant::PLANE);
+			filter.push_back(Variant::COLOR);
 
-			// No filtering property track until nested filters are supported.
-			prop_selector->set_type_filter(Vector<Variant::Type>());
+			prop_selector->set_type_filter(filter);
 		} break;
 		case Animation::TYPE_POSITION_3D:
 		case Animation::TYPE_ROTATION_3D:
