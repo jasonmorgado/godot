@@ -3282,7 +3282,7 @@ void AnimationTrackEdit::gui_input(const Ref<InputEvent> &p_event) {
 					} break;
 					case Animation::TYPE_BLEND_SHAPE: {
 						// BlendShape has a slightly different selector.
-						menu->add_item(TTR("Change Target BlendShape..."), MENU_CHANGE_TARGET_BLENDSHAPE);
+						menu->add_item(TTR("Change Target BlendShape..."), MENU_CHANGE_TARGET_PROPERTY);
 					} break;
 					case Animation::TYPE_POSITION_3D:
 					case Animation::TYPE_ROTATION_3D:
@@ -3293,7 +3293,7 @@ void AnimationTrackEdit::gui_input(const Ref<InputEvent> &p_event) {
 							break;
 						}
 						if (editor->is_bone_track(get_track())) {
-							menu->add_item(TTR("Change Target Bone..."), MENU_CHANGE_TARGET_BONE);
+							menu->add_item(TTR("Change Target Bone..."), MENU_CHANGE_TARGET_PROPERTY);
 						}
 					} break;
 					default: {
@@ -3769,9 +3769,7 @@ void AnimationTrackEdit::_menu_selected(int p_index) {
 		case MENU_CHANGE_TARGET_NODE: {
 			emit_signal(SNAME("change_track_target_node"));
 		} break;
-		case MENU_CHANGE_TARGET_PROPERTY:
-		case MENU_CHANGE_TARGET_BLENDSHAPE:
-		case MENU_CHANGE_TARGET_BONE: {
+		case MENU_CHANGE_TARGET_PROPERTY: {
 			emit_signal(SNAME("change_track_target_property"));
 		} break;
 	}
