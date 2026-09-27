@@ -6131,9 +6131,14 @@ void AnimationTrackEditor::_change_track_property_selected(const String &p_name)
 	String base_path = current_track_path.get_concatenated_names();
 	String new_path = base_path + ":" + p_name;
 
-	bool is_blend_shape = adding_track_type == Animation::TYPE_BLEND_SHAPE;
-	if (is_blend_shape) {
+	if (adding_track_type == Animation::TYPE_BLEND_SHAPE) {
 		new_path = _get_blend_shape_track_path(new_path);
+	}
+	// Prevent animating current animation.
+	Node *target_node = get_track_node_or_null(affected_track_idx);
+	if (target_node == AnimationPlayerEditor::get_singleton()->get_player() && p_name == "current_animation") {
+		EditorNode::get_singleton()->show_warning(TTR(ANIMATIONPLAYER_CANNOT_ANIMATE_SELF_MESSAGE));
+		return;
 	}
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
