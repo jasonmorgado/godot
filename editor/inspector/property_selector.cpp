@@ -46,7 +46,9 @@ void PropertySelector::_text_changed(const String &p_newtext) {
 }
 
 void PropertySelector::_update_search() {
-	if (properties) {
+	if (!replacing_path.is_empty()) {
+		set_title(vformat(TTR("Select a Property to Replace \"%s\""), replacing_path));
+	} else if (properties) {
 		set_title(TTRC("Select Property"));
 	} else if (virtuals_only) {
 		set_title(TTRC("Select Virtual Method"));
@@ -677,6 +679,10 @@ void PropertySelector::select_property_from_instance(Object *p_instance, const S
 
 void PropertySelector::set_type_filter(const Vector<Variant::Type> &p_type_filter) {
 	type_filter = p_type_filter;
+}
+
+void PropertySelector::set_replacing_path(const String &p_path) {
+	replacing_path = p_path;
 }
 
 void PropertySelector::_bind_methods() {

@@ -5857,6 +5857,7 @@ void AnimationTrackEditor::_add_track(int p_type) {
 
 	Vector<StringName> valid_types = _get_valid_types_for_track(adding_track_type);
 	pick_track->set_valid_types(valid_types);
+	pick_track->set_title(TTR("Pick a Node to Animate:"));
 
 	pick_track->popup_scenetree_dialog(nullptr, root_node);
 	pick_track->get_filter_line_edit()->clear();
@@ -5895,6 +5896,7 @@ void AnimationTrackEditor::_new_track_node_selected(NodePath p_path) {
 			adding_track_path = path_to;
 			dialog_state = DIALOG_ADD_TRACK_PROPERTY;
 			prop_selector->set_type_filter(Vector<Variant::Type>());
+			prop_selector->set_replacing_path("");
 			prop_selector->select_property_from_instance(node);
 		} break;
 		case Animation::TYPE_BLEND_SHAPE: {
@@ -5903,6 +5905,7 @@ void AnimationTrackEditor::_new_track_node_selected(NodePath p_path) {
 			Vector<Variant::Type> filter;
 			filter.push_back(Variant::FLOAT);
 			prop_selector->set_type_filter(filter);
+			prop_selector->set_replacing_path("");
 			prop_selector->select_property_from_instance(node);
 		} break;
 		case Animation::TYPE_POSITION_3D:
@@ -5930,6 +5933,7 @@ void AnimationTrackEditor::_new_track_node_selected(NodePath p_path) {
 			dialog_state = DIALOG_ADD_TRACK_PROPERTY;
 			adding_track_path = path_to;
 			prop_selector->set_type_filter(filter);
+			prop_selector->set_replacing_path("");
 			prop_selector->select_property_from_instance(node);
 		} break;
 		case Animation::TYPE_AUDIO: {
@@ -6160,6 +6164,7 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 
 	int track_type = animation->track_get_type(p_track);
 	Vector<StringName> valid_types = _get_valid_types_for_track(track_type);
+	NodePath track_path = animation->track_get_path(p_track);
 
 	Node *current_node = get_track_node_or_null(p_track);
 
@@ -6169,6 +6174,7 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 		valid_types.push_back(SNAME("Skeleton3D"));
 	}
 	pick_track->set_valid_types(valid_types);
+	pick_track->set_title(vformat(TTR("Select a Node to Replace \"%s\":"), String(track_path)));
 
 	pick_track->popup_scenetree_dialog(current_node, root_node);
 	pick_track->get_filter_line_edit()->clear();
@@ -6217,7 +6223,9 @@ void AnimationTrackEditor::_change_track_target_property_pressed(int p_track) {
 	affected_track_idx = p_track;
 	dialog_state = DIALOG_CHANGE_PROPERTY_PATH;
 
-	String current_property = animation->track_get_path(p_track).get_concatenated_subnames();
+	NodePath current_track_path = animation->track_get_path(p_track);
+	String current_property = current_track_path.get_concatenated_subnames();
+	prop_selector->set_replacing_path(String(current_track_path));
 	prop_selector->select_property_from_instance(current_node, current_property);
 }
 
@@ -8804,7 +8812,6 @@ AnimationTrackEditor::AnimationTrackEditor() {
 	// SceneTreeDialog to add a new track
 	pick_track = memnew(SceneTreeDialog);
 	add_child(pick_track);
-	pick_track->set_title(TTR("Pick a node to animate:"));
 	pick_track->connect("selected", callable_mp(this, &AnimationTrackEditor::_pick_track_node_selected));
 	pick_track->get_filter_line_edit()->connect(SceneStringName(text_changed), callable_mp(this, &AnimationTrackEditor::_pick_track_filter_text_changed));
 
