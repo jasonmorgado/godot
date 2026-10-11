@@ -6183,7 +6183,7 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 	if (affected_track_indices.size() > 1) {
 		replace_path = replace_path.slice(0, -1);
 	}
-	pick_track->set_title(vformat(TTR("Select a Node to Replace \"%s\":"), String(replace_path)));
+	pick_track->set_title(vformat(TTR("Pick a Node to Replace \"%s\""), String(replace_path)));
 
 	pick_track->popup_scenetree_dialog(current_node, root_node);
 	pick_track->get_filter_line_edit()->clear();
