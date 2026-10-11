@@ -6047,8 +6047,6 @@ void AnimationTrackEditor::_move_track_to_node(NodePath p_path) {
 	// Get New Path, in respect to AP's root_node.
 	NodePath current_track_path = NodePath(animation->track_get_path(affected_track_idx));
 	String property_path = current_track_path.get_concatenated_subnames();
-	String new_path = String(root_node->get_path_to(new_node));
-	new_path = new_path + ":" + property_path;
 
 	// Prevent animating this AnimationPlayer's current_animation.
 	bool animating_self = (new_node == ap && (track_type == Animation::TYPE_ANIMATION || property_path == "current_animation"));
@@ -6057,10 +6055,17 @@ void AnimationTrackEditor::_move_track_to_node(NodePath p_path) {
 		return;
 	}
 
+	// Use affected_track_indices, as Bezier tracks may move multiple tracks.
+	String new_base_path = String(root_node->get_path_to(new_node));
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(TTR("Change Track Path"));
-	undo_redo->add_do_method(animation.ptr(), "track_set_path", affected_track_idx, new_path);
-	undo_redo->add_undo_method(animation.ptr(), "track_set_path", affected_track_idx, current_track_path);
+	for (int i = 0; i < affected_track_indices.size(); i++) {
+		int track_idx = affected_track_indices[i];
+		NodePath old_path = animation->track_get_path(track_idx);
+		String new_path = new_base_path + ":" + String(old_path.get_concatenated_subnames());
+		undo_redo->add_do_method(animation.ptr(), "track_set_path", track_idx, new_path);
+		undo_redo->add_undo_method(animation.ptr(), "track_set_path", track_idx, old_path);
+	}
 	undo_redo->commit_action();
 }
 
@@ -6158,15 +6163,14 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 		ERR_FAIL_EDMSG("No AnimationPlayer is currently being edited.");
 	}
 	Node *root_node = ap->get_node_or_null(ap->get_root_node());
+	Node *current_node = get_track_node_or_null(p_track);
 
 	dialog_state = DIALOG_CHANGE_NODE_PATH;
 	affected_track_idx = p_track;
+	affected_track_indices = _get_bezier_vector_tracks(p_track);
 
 	int track_type = animation->track_get_type(p_track);
 	Vector<StringName> valid_types = _get_valid_types_for_track(track_type);
-	NodePath track_path = animation->track_get_path(p_track);
-
-	Node *current_node = get_track_node_or_null(p_track);
 
 	// Transform3D pointing to bone requires Skeleton3D instead of Node3D.
 	if (is_bone_track(p_track)) {
@@ -6174,7 +6178,12 @@ void AnimationTrackEditor::_change_track_target_node_pressed(int p_track) {
 		valid_types.push_back(SNAME("Skeleton3D"));
 	}
 	pick_track->set_valid_types(valid_types);
-	pick_track->set_title(vformat(TTR("Select a Node to Replace \"%s\":"), String(track_path)));
+
+	NodePath replace_path = animation->track_get_path(p_track);
+	if (affected_track_indices.size() > 1) {
+		replace_path = replace_path.slice(0, -1);
+	}
+	pick_track->set_title(vformat(TTR("Select a Node to Replace \"%s\":"), String(replace_path)));
 
 	pick_track->popup_scenetree_dialog(current_node, root_node);
 	pick_track->get_filter_line_edit()->clear();
@@ -6259,6 +6268,71 @@ String AnimationTrackEditor::_get_blend_shape_track_path(const String &p_propert
 		return p_property_path.replace_first(":blend_shapes/", ":");
 	}
 	return p_property_path;
+}
+
+// New Bezier tracks on vectors split into multiple tracks.
+// If ALL component tracks are present without duplicates, return the list of affected indices.
+// Otherwise return p_track.
+Vector<int> AnimationTrackEditor::_get_bezier_vector_tracks(int p_track) {
+	Vector<int> tracks;
+	if (animation.is_null() || p_track < 0 || p_track >= animation->get_track_count()) {
+		return tracks;
+	}
+	tracks.push_back(p_track);
+
+	if (animation->track_get_type(p_track) != Animation::TYPE_BEZIER) {
+		return tracks;
+	}
+
+	Node *node = get_track_node_or_null(p_track);
+	if (node == nullptr) {
+		return tracks;
+	}
+
+	NodePath path = animation->track_get_path(p_track);
+	if (path.get_subname_count() < 2) {
+		// Simple path like Node:property, can't be a Vector.
+		return tracks;
+	}
+	NodePath parent_path = path.slice(0, -1);
+
+	// Get component indices.
+	Variant::Type parent_type = node->get_indexed(parent_path.get_subnames()).get_type();
+	bool valid = false;
+	Vector<String> subindices = _get_bezier_subindices_for_type(parent_type, &valid);
+	if (!valid || subindices.size() < 2) {
+		return tracks;
+	}
+
+	// Double check p_track is part of the expected indices.
+	String component = ":" + String(path.get_subname(path.get_subname_count() - 1));
+	if (!subindices.has(component)) {
+		return tracks;
+	}
+
+	// Verify we have ONE of each subindex path.
+	tracks.clear();
+	String parent_path_str = String(parent_path);
+	for (int i = 0; i < subindices.size(); i++) {
+		NodePath sibling_path = parent_path_str + subindices[i];
+		int found_idx = -1;
+		int match_count = 0;
+
+		for (int j = 0; j < animation->get_track_count(); j++) {
+			if (animation->track_get_type(j) == Animation::TYPE_BEZIER && animation->track_get_path(j) == sibling_path) {
+				found_idx = j;
+				match_count++;
+			}
+		}
+
+		if (match_count != 1) {
+			// Missing a component, or duplicate component present.
+			tracks.push_back(p_track);
+			return tracks;
+		}
+		tracks.push_back(found_idx);
+	}
+	return tracks;
 }
 
 void AnimationTrackEditor::_timeline_value_changed(double) {

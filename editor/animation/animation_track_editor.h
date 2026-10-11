@@ -698,6 +698,7 @@ class AnimationTrackEditor : public VBoxContainer {
 	void _change_track_target_property_pressed(int p_track);
 	Variant::Type _get_track_value_type(int p_track);
 	String _get_blend_shape_track_path(const String &p_property_path) const;
+	Vector<int> _get_bezier_vector_tracks(int p_track);
 
 	void _update_step_spinbox();
 	void _store_snap_states();
@@ -709,6 +710,7 @@ class AnimationTrackEditor : public VBoxContainer {
 	int adding_track_type = 0;
 	NodePath adding_track_path;
 	int affected_track_idx = -1;
+	Vector<int> affected_track_indices;
 
 	bool keying = false;
 
